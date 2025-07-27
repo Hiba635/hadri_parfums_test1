@@ -9,6 +9,22 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+};
 
-export default nextConfig
+nextConfig.headers = async () => [
+  {
+    source: "/(.*)",
+    headers: [
+      {
+        key: "X-Frame-Options",
+        value: "ALLOWALL",
+      },
+      {
+        key: "Content-Security-Policy",
+        value: "frame-ancestors *",
+      },
+    ],
+  },
+];
+
+export default nextConfig;
