@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useShopifyCart } from "@/hooks/use-shopify-cart"
 
 interface Parfum {
   id: string
@@ -114,6 +115,9 @@ export default function HadriParfumsAdvanced() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [cartItems, setCartItems] = useState<any[]>([])
+  
+  // Hook pour le panier Shopify
+  const { addToShopifyCart, isLoading, error, success } = useShopifyCart()
 
   const filteredParfums = parfumsData.filter((parfum) => {
     const matchesSearch = parfum.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -131,9 +135,27 @@ export default function HadriParfumsAdvanced() {
     }
   }
 
-  const handleAddToCart = () => {
-    const selectedParfums = Object.values(selectedChoices).filter(Boolean)
+  const handleAddToCart = async () => {
+    const selectedParfums = Object.values(selectedChoices).filter((parfum): parfum is Parfum => parfum !== null)
     if (selectedParfums.length === 4) {
+      // Ajouter chaque parfum au panier Shopify
+      for (const parfum of selectedParfums) {
+        await addToShopifyCart({
+          productId: parseInt(parfum.id),
+          quantity: quantity,
+          title: parfum.name,
+          price: parfum.price
+        })
+      }
+      
+      // Ajouter aussi le pack complet
+      await addToShopifyCart({
+        productId: 999, // ID du pack (à configurer dans Shopify)
+        quantity: quantity,
+        title: "Pack 4 Parfums Premium",
+        price: 299
+      })
+      
       setCartItems((prev) => [...prev, { pack: selectedParfums, quantity, price: 299 }])
       setShowSuccessModal(true)
     }
@@ -344,10 +366,10 @@ export default function HadriParfumsAdvanced() {
                 </div>
                 <Button
                   className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
-                  disabled={!isPackComplete}
+                  disabled={!isPackComplete || isLoading}
                   onClick={handleAddToCart}
                 >
-                  AJOUTER AU PANIER
+                  {isLoading ? "AJOUT EN COURS..." : "AJOUTER AU PANIER"}
                 </Button>
               </div>
             </div>
@@ -485,18 +507,16 @@ export default function HadriParfumsAdvanced() {
                 className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
                 onClick={() => {
                   setShowSuccessModal(false)
-                  // Redirect to cart page
-                  window.location.href = "/cart"
+                  window.open('https://0exmp8-vn.myshopify.com/cart', '_blank')
                 }}
               >
-                Voir le panier
+                Voir le panier Shopify
               </Button>
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white font-bold"
                 onClick={() => {
                   setShowSuccessModal(false)
-                  // Redirect to checkout
-                  window.location.href = "/checkout"
+                  window.open('https://0exmp8-vn.myshopify.com/checkout', '_blank')
                 }}
               >
                 Passer la commande
